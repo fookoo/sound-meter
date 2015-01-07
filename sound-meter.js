@@ -26,16 +26,17 @@ function soundMeterCtrl () {
         normalized:                 0,      //normalized level (with dynamic noise level)
         noise:                      0,      //raw noise level
         minSoundLevel:              30,     //minmum sound level above noise level to trigger start event
-        minSoundLevel_normalized:   30,     //normalized minimum sound level above noise level to trigger start event [calculated, only initial]
+        minSoundLevel_normalized:   30,     //normalized minimum sound level above noise level to trigger start event
         max:                        60,
-        max_normalized:             60      //[calculated, only initial]
+        max_normalized:             60
     };
 
 
     this.init = function () {
         //soundMeter initialization
         var initSuccessful  = new Event ('sound.init.ok'),
-            initFail        = new Event ('sound.init.fail');
+            initFail        = new Event ('sound.init.fail'),
+            dynamicLevel    = new Event ('sound.dynamic.level');
 
 
         var buffer_size     = 125,                               //how many samples take place in normalize process
@@ -87,7 +88,6 @@ function soundMeterCtrl () {
                             sound.noise = average - sound.normalized;
 
                             sound.minSoundLevel_normalized = sound.minSoundLevel - ((sound.noise / 180) * sound.minSoundLevel);
-
                             if (!sound.on) {
                                 sound.max_normalized = sound.max - sound.noise;
                             }
@@ -99,6 +99,8 @@ function soundMeterCtrl () {
                         if (!inited && sample > buffer_size) {
                             sample = 0;
                             inited = true;
+
+                            document.dispatchEvent (dynamicLevel);
                         }
 
                         self.checkLevels ();
@@ -122,7 +124,6 @@ function soundMeterCtrl () {
         if (!sound.enable) {
             return false;
         }
-
         //start
         if (!sound.on && sound.normalized > sound.minSoundLevel_normalized ) {
             sound.on = true;

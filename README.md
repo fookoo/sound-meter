@@ -31,3 +31,7 @@ this event means that sound level is higher than minimal threshold and sound.blo
 ### sound.blow.stop
 
 this event means that sound level dropped below minimal threshold
+
+### sound.dynamic.level
+
+this event means that dynamic noise level is calculated and can be used
