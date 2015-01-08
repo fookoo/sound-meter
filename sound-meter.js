@@ -20,15 +20,18 @@ function soundMeterCtrl () {
     var audioContext = window.AudioContext || window.webkitAudioContext || window.mozAudioContext || false;
 
     var sound = {
-        on:                         false,  //if sound level is higher then min sound
+        on:                         false,  //if sound level is higher then thresold and longer then minimum delta time
+        peek:                       false,  //peek flag
         enable:                     true,   //if sound events is triggered
         level:                      0,      //raw level
         normalized:                 0,      //normalized level (with dynamic noise level)
         noise:                      0,      //raw noise level
-        minSoundLevel:              30,     //minmum sound level above noise level to trigger start event
-        minSoundLevel_normalized:   30,     //normalized minimum sound level above noise level to trigger start event
+        minSoundLevel:              25,     //minmum sound level above noise level to trigger start event
+        minSoundLevel_normalized:   25,     //normalized minimum sound level above noise level to trigger start event
         max:                        60,
-        max_normalized:             60
+        max_normalized:             60,
+        minDeltaTime:               500,     //delta time [ms] if peek duration is longer than minDeltaTime start blow event is triggered
+        duration:                   0
     };
 
 
@@ -124,8 +127,19 @@ function soundMeterCtrl () {
         if (!sound.enable) {
             return false;
         }
+
         //start
-        if (!sound.on && sound.normalized > sound.minSoundLevel_normalized ) {
+        if (!sound.on && !sound.peek && sound.normalized > sound.minSoundLevel_normalized ) {
+            sound.peek = true;
+            sound.duration = 0;
+            sound.start = Date.now ();
+        }
+
+        if (!sound.on && sound.peek && sound.normalized > sound.minSoundLevel_normalized ) {
+            sound.duration = Date.now () - sound.start;
+        }
+
+        if (!sound.on && sound.peek && sound.duration > sound.minDeltaTime && sound.normalized > sound.minSoundLevel_normalized ) {
             sound.on = true;
             sound.start = Date.now ();
 
@@ -136,13 +150,13 @@ function soundMeterCtrl () {
                 max: sound.max_normalized,
                 duration: 0
             }});
-
             document.dispatchEvent (blowStart);
         }
 
         //during
         if (sound.on && sound.normalized > sound.minSoundLevel_normalized) {
             sound.duration = Date.now () - sound.start;
+
             var blowDuring = new CustomEvent ('sound.blow.during', { detail: {
                 level: sound.level,
                 normalized: sound.normalized,
@@ -150,13 +164,13 @@ function soundMeterCtrl () {
                 max: sound.max_normalized,
                 duration: sound.duration
             }});
-
             document.dispatchEvent (blowDuring);
         }
 
         //stop
         if (sound.on && sound.normalized < sound.minSoundLevel_normalized) {
             sound.on = false;
+            sound.peek = false;
             sound.stop = Date.now ();
             sound.duration = sound.stop - sound.start;
 
@@ -167,8 +181,13 @@ function soundMeterCtrl () {
                 max: sound.max_normalized,
                 duration: sound.duration
             }});
-
             document.dispatchEvent (blowStop);
+        }
+
+        //stop peek
+        if (sound.peek && sound.normalized < sound.minSoundLevel_normalized) {
+            sound.peek = false;
+            sound.duration = 0;
         }
     };
 
